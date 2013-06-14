@@ -1,0 +1,16 @@
+MAC CHANger and gettime tools
+-------------------------------
+
+1- How to install
+ make
+ sudo make install
+
+2- How to use macchan
+ sudo modprobe macchan mac=12:34:56:78:9a:bc
+ sudo ifconfig eth1 down
+
+3- How to use gettime
+ edit gettime.c for adjusting time
+ make
+ export LD_PRELOAD=$HOME/gettime.so
+ date
