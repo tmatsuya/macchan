@@ -2,7 +2,6 @@ ifneq ($(KERNELRELEASE),)
 obj-m		:= macchan.o
 else
 KDIR		:= /lib/modules/$(shell uname -r)/build/
-KDIR2		:= /lib/modules/$(shell uname -r)/kernel/
 PWD		:= $(shell pwd)
 
 all:
@@ -14,6 +13,6 @@ clean:
 	rm -f *.so
 
 install:
-	cp -p $(PWD)/*.ko $(KDIR2)/drivers/net/
+	install -m 644 $(PWD)/*.ko /lib/modules/`uname -r`/kernel/drivers/net
 	depmod -a
 endif
