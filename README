@@ -14,3 +14,12 @@ MAC CHANger and gettime tools
  make
  export LD_PRELOAD=$HOME/gettime.so
  date
+
+9- example settings for auto-boot
+
+ $ cat /etc/modules-load.d/macchan.conf
+ #Load 'macchan.ko' at boot.
+ macchan
+
+ $ cat /etc/modprobe.d/macchan.conf 
+ options macchan mac=00:12:34:56:78:ab
