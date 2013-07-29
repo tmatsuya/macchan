@@ -28,57 +28,16 @@ MODULE_PARM_DESC(mac, "MAC Address");
  * @iobase:	pointer to I/O memory region
  * @membase:	pointer to buffer memory region
  * @netdev:	pointer to network device structure
- * @napi:	NAPI structure
  * @rx_lock:	receive lock
  * @lock:	device lock
  */
 struct macchan {
-	void __iomem *iobase;
-	union {
-		void __iomem *membase;
-	};
-
 	struct net_device *netdev;
-	struct napi_struct napi;
 };
-
-static void macchan_tx_timeout(struct net_device *dev)
-{
-	if (netif_running(dev)) {
-		netif_wake_queue(dev);
-	}
-}
-
-static irqreturn_t macchan_interrupt_rx(int irq, void *dev_id)
-{
-	struct net_device *dev = (struct net_device *)dev_id;
-	struct macchan *tp = netdev_priv(dev);
-
-
-	napi_schedule(&tp->napi);
-
-	return IRQ_HANDLED;
-}
-
-static int macchan_poll(struct napi_struct *napi, int budget)
-{
-	int work_done;
-
-	work_done = 1;
-
-	if (work_done < budget) {
-		napi_complete(napi);
-	}
-
-	return work_done;
-}
 
 static int macchan_open(struct net_device *dev)
 {
 	struct macchan *tp = netdev_priv(dev);
-
-	netif_start_queue(dev);
-	napi_enable(&tp->napi);
 
 	return 0;
 }
@@ -86,8 +45,6 @@ static int macchan_open(struct net_device *dev)
 static int macchan_stop(struct net_device *dev)
 {
 	struct macchan *tp = netdev_priv(dev);
-
-	napi_disable(&tp->napi);
 
 	netif_stop_queue(dev);
 
@@ -112,7 +69,6 @@ static netdev_tx_t macchan_start_xmit(struct sk_buff *skb, struct net_device *de
 static const struct net_device_ops macchan_netdev_ops = {
 	.ndo_open	= macchan_open,
 	.ndo_stop	= macchan_stop,
-	.ndo_tx_timeout	= macchan_tx_timeout,
 	.ndo_get_stats	= macchan_stats,
 	.ndo_start_xmit	= macchan_start_xmit,
 };
@@ -120,12 +76,10 @@ static const struct net_device_ops macchan_netdev_ops = {
 static int __devinit macchan_probe(struct platform_device *pdev)
 {
 	struct net_device *netdev = NULL;
-	struct resource *res = NULL;
-	struct resource *mmio = NULL;
 	struct macchan *tp = NULL;
-	static int first = 1;
 	int ret = 0;
 	unsigned char macadr[6], *p;
+	static first = 1;
 
 	/* allocate networking device */
 	netdev = alloc_etherdev(sizeof(struct macchan));
@@ -137,14 +91,6 @@ static int __devinit macchan_probe(struct platform_device *pdev)
 
 	SET_NETDEV_DEV(netdev, &pdev->dev);
 	platform_set_drvdata(pdev, netdev);
-
-	/* obtain I/O memory space */
-
-	netdev->base_addr = 0;
-
-	/* obtain buffer memory space */
-	netdev->mem_start = (unsigned long)0;
-	netdev->mem_end   = 0;
 
 	tp = netdev_priv(netdev);
 	tp->netdev = netdev;
@@ -180,10 +126,6 @@ static int __devinit macchan_probe(struct platform_device *pdev)
 	netdev->netdev_ops     = &macchan_netdev_ops;
 	netdev->features       = 0;
 
-	/* setup NAPI */
-	memset(&tp->napi, 0, sizeof(tp->napi));
-	netif_napi_add(netdev, &tp->napi, macchan_poll, 64);
-
 	/* reset stats */
 	memset(&netdev->stats, 0, sizeof(netdev->stats));
 
@@ -209,11 +151,6 @@ static void __devexit  macchan_remove(struct platform_device *pdev)
 	platform_set_drvdata(pdev, NULL);
 
 	if (netdev) {
-
-		if (tp->membase) {
-			kfree(tp->membase);
-			tp->membase = NULL;
-		}
 		unregister_netdev(netdev);
 		free_netdev(netdev);
 	}
