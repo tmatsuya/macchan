@@ -79,7 +79,7 @@ static int __devinit macchan_probe(struct platform_device *pdev)
 	struct macchan *tp = NULL;
 	int ret = 0;
 	unsigned char macadr[6], *p;
-	static first = 1;
+	static int first = 1;
 
 	/* allocate networking device */
 	netdev = alloc_etherdev(sizeof(struct macchan));
